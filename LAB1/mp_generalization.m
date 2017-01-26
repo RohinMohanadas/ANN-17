@@ -1,0 +1,107 @@
+clear all
+clc
+close all
+
+hidden = 25;
+eta = 0.6;
+epochs = 1000;
+alpha = 0.9;
+error = ones(1,epochs);
+n = 25;
+
+
+
+%generate data
+x=[-5:1:5]';
+y=x;
+%permute = randperm(length(x));
+%x = x(permute, :);
+%y = y(permute, :);
+z=exp(-x.*x*0.1) * exp(-y.*y*0.1)' - 0.5;
+
+
+mesh (x, y, z);
+
+gridsize = numel(x);
+ndata = gridsize^2;
+
+targets = reshape (z, 1, ndata);
+[xx, yy] = meshgrid (x, y);
+patterns = [reshape(xx, 1, ndata); reshape(yy, 1, ndata)];
+
+[insize, mau] = size(patterns);
+[outsize, mau] = size(targets);
+
+
+%permute = randperm(mau);
+%patterns = patterns(:, permute);
+%targets = targets(:, permute);
+%x = x(:, permute);
+%y = y(:, permute); 
+
+%testpats = patterns(:, n+1:length(patterns));
+trainingpatterns = patterns(:, 1:n);
+%testtargs = targets(:, n+1:length(targets));
+trainingtargets = targets(:, 1:n);
+%xtraining = x(1:sqr, : );
+%x = x(1:3, :);
+%ytest = y(4:11, :);
+%y = y(1:3, :);
+
+pat = [trainingpatterns; ones(1, n)];
+%testpat = [testpats; ones(1,length(testpats))];
+
+
+
+%Generate initial weights
+w = randn(hidden,insize+1).*0.15;
+v = randn(outsize,hidden+1).*0.15;
+
+dw = zeros(hidden,insize+1).*0.01;
+dv = zeros(outsize,hidden+1).*0.01;
+
+for epoch=1:epochs
+    
+    %forward pass
+    hin = w * [trainingpatterns ; ones(1,n)];
+    hout = [2 ./ (1+exp(-hin)) - 1 ; ones(1,n)];
+    oin = v * hout;
+    out = 2 ./ (1+exp(-oin)) - 1;
+
+    %backward pass
+    delta_o = (out - trainingtargets) .* ((1 + out) .* (1 - out)) * 0.5;
+    delta_h = (v' * delta_o) .* ((1 + hout) .* (1 - hout)) * 0.5;
+    delta_h = delta_h(1:hidden, :);
+    
+
+
+    %weight update
+    dw = (dw .* alpha) - (delta_h * pat') .* (1-alpha);
+    dv = (dv .* alpha) - (delta_o * hout') .* (1-alpha);
+    w = w + dw .* eta;
+    v = v + dv .* eta;
+    
+    %zz = reshape(out, 3, 3);
+    %mesh(x,y,zz)
+    %axis([-5 5 -5 5 -0.7 0.7]);
+    %drawnow;
+    
+    error(epoch) = sum(sum(abs(sign(out) - trainingtargets)./2));
+    
+end
+figure;
+plot(error)
+
+%forward pass
+    hin = w * [patterns ; ones(1,length(patterns))];
+    hout = [2 ./ (1+exp(-hin)) - 1 ; ones(1,length(patterns))];
+    oin = v * hout;
+    out = 2 ./ (1+exp(-oin)) - 1;
+    
+    ztest = reshape(out, gridsize, gridsize);
+    %xtest = reshape(patterns,
+    figure;
+    mesh(x,y,ztest);
+    axis([-5 5 -5 5 -0.7 0.7]);
+    
+    
